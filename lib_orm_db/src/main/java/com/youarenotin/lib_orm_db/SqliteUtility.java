@@ -102,6 +102,7 @@ public class SqliteUtility {
             columnInfoNameList.add(c.getColumnName());
         }
         List<T> rltList = new ArrayList<T>();
+        long start = System.currentTimeMillis();
         Cursor cursor = db.query(this.dbName, columnInfoNameList.toArray(new String[0]), selection, selectArgs, groupBy, having, orderBy, limit);
         while (cursor.moveToNext()){
             try {
@@ -124,6 +125,9 @@ public class SqliteUtility {
                 }
             }
         }
+        long end = System.currentTimeMillis();
+        DBLogger.d(TAG,"table[ %s ] 设置数据完毕 , 耗时 %s",tableInfo.getTableName(),String.valueOf(end-start));
+        DBLogger.d(TAG,"查询到 %s 条数据" , rltList.size());
         if (rltList.size()>0){
             return  rltList;
         }
@@ -131,11 +135,26 @@ public class SqliteUtility {
     }
 
     /**********************************开启insert系列方法***************************************/
+    public <T> void insertOrReplace(Extra extra  ,T...entity ){
+        if (entity==null || entity.length<=0){
+            DBLogger.d(TAG,"method[ insertOrReplace(Extra extra  ,T...entity ) ] ,entity is null or empty ");
+        }
+        else {
+            insert(extra,Arrays.asList(entity),"INSERT OR REPLACE INTO");
+        }
+
+    }
+
+    private <T> void insert(Extra extra, List<T> entityList, String s) {
+        TableInfo tableInfo = checkTable(entityList.get(0).getClass());
+        if (tableInfo == null){
+            DBLogger.d(TAG,"insert failed");
+        }
+        long start = System.currentTimeMillis();
+        db.beginTransaction();
 
 
-
-
-
+    }
 
 
     /**********************************tool method**********************************************/

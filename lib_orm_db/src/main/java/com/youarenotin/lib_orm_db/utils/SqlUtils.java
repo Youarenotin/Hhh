@@ -1,5 +1,6 @@
 package com.youarenotin.lib_orm_db.utils;
 
+import android.nfc.Tag;
 import android.text.TextUtils;
 
 import com.youarenotin.lib_orm_db.SqliteUtility;
@@ -16,6 +17,40 @@ import java.util.List;
  * lubo_wen@126.com
  */
 public class SqlUtils {
+    /**
+     * 得到插入数据sql
+     * @param insertInto
+     * @param tableInfo
+     * @return
+     */
+    public static String getInsertsql(String insertInto , TableInfo tableInfo){
+        if(tableInfo==null){
+            DBLogger.d(SqliteUtility.TAG,"tableInfo is null ");
+            return "";
+        }
+        List<String> columns = new ArrayList<String>();
+        if (tableInfo.getPrimaryKey() instanceof AutoIncrementColumnInfo)
+            ;
+        else
+            columns.add(tableInfo.getPrimaryKey().getColumnName());
+        for (ColumnInfo c : tableInfo.getColumns()){
+            columns.add(c.getColumnName());
+        }
+        StringBuilder sb  = new StringBuilder(insertInto);
+        sb.append(" ").append(tableInfo.getTableName()).append(" ");
+        sb.append("VALUES ( ");
+        for (String s : columns){
+            sb.append(" ").append(s).append(" , ");
+        }
+        sb.append(" ) ");
+
+    }
+
+    /**
+     * 得到创建表sql
+     * @param tableInfo
+     * @return
+     */
     public static String getCreateTableSql(TableInfo tableInfo) {
         StringBuilder sb = new StringBuilder();
         ColumnInfo primaryKey = tableInfo.getPrimaryKey();
