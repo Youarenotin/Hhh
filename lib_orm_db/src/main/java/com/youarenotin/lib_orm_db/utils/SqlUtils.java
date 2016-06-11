@@ -1,10 +1,15 @@
 package com.youarenotin.lib_orm_db.utils;
 
+import android.text.TextUtils;
+
 import com.youarenotin.lib_orm_db.SqliteUtility;
 import com.youarenotin.lib_orm_db.extra.AutoIncrementColumnInfo;
 import com.youarenotin.lib_orm_db.extra.ColumnInfo;
 import com.youarenotin.lib_orm_db.extra.Extra;
 import com.youarenotin.lib_orm_db.extra.TableInfo;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Created by lubo on 2016/6/10.
@@ -50,7 +55,46 @@ public class SqlUtils {
         return sql;
     }
 
+    /**
+     *
+     * @param extra
+     * @return
+     */
     public static String appenExtraWhereClause(Extra extra){
+        StringBuilder sb = new StringBuilder();
+        if (extra==null || (TextUtils.isEmpty(extra.getOwner()) && TextUtils.isEmpty(extra.getKey()))){
+            sb.append("");
+        }
+        if (!TextUtils.isEmpty(extra.getKey()) && !TextUtils.isEmpty(extra.getOwner())){
+            sb.append(" ")
+                    .append(FieldUtils.OWNER).append(" = ? ")
+                    .append(" AND　")
+                    .append(FieldUtils.KEY).append(" = ? ");
+        }
+        if (!TextUtils.isEmpty(extra.getOwner())){
+            sb.append(" ").append(FieldUtils.OWNER)
+                    .append(" = ? ");
+        }
+        if(!TextUtils.isEmpty(extra.getKey())){
+            sb.append(" ").append(FieldUtils.KEY)
+                    .append(" = ? ");
+        }
+        return sb.toString();
+    }
 
+    /**
+     *
+     * @param extra
+     * @return
+     */
+    public static String[] appendExtraWhereArgs(Extra extra){
+        List<String> args = new ArrayList<String>();
+        if (!TextUtils.isEmpty(extra.getKey())){
+            args.add(extra.getKey());
+        }
+        if (!TextUtils.isEmpty(extra.getOwner())){
+            args.add(extra.getOwner());
+        }
+        return args.toArray(new String[0]);
     }
 }
