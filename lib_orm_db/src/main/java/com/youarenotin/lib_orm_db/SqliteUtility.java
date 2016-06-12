@@ -294,17 +294,17 @@ public class SqliteUtility {
         }
     }
 
-    public <T>  void deleteById(Extra extra , Class<?> clazz , Object id){
+    public <T> void deleteById(Extra extra, Class<?> clazz, Object id) {
         try {
             TableInfo tableInfo = checkTable(clazz);
             String where = SqlUtils.appenExtraWhereClauseSql(extra);
             String name = tableInfo.getPrimaryKey().getColumnName();
-            where = String.format(" "+name+" = "+String.valueOf(id)+" AND　%s",where);
-            String sql = "DELETE FROM "+tableInfo.getTableName()+" WHERE "+where;
+            where = String.format(" " + name + " = " + String.valueOf(id) + " AND　%s", where);
+            String sql = "DELETE FROM " + tableInfo.getTableName() + " WHERE " + where;
             DBLogger.d(TAG, "method[deleteById] 表%s  sql##### %s", tableInfo.getTableName(), sql);
             long start = System.currentTimeMillis();
             db.execSQL(sql);
-            DBLogger.d(TAG,"表%s 删除数据 耗时%s",tableInfo.getTableName(),String.valueOf((System.currentTimeMillis()-start) / 1000));
+            DBLogger.d(TAG, "表%s 删除数据 耗时%s", tableInfo.getTableName(), String.valueOf((System.currentTimeMillis() - start) / 1000));
         } catch (SQLException e) {
             e.printStackTrace();
         }
@@ -324,14 +324,16 @@ public class SqliteUtility {
 
         } catch (Exception e) {
             e.printStackTrace();
-            return 0 ;
+            return 0;
         } finally {
             DBLogger.d(TAG, "表%s 删除数据 耗时%s", tableInfo.getTableName(), String.valueOf((System.currentTimeMillis() - start) / 1000));
         }
 
     }
 
-    /***********************************统计方法*****************************************************/
+    /***********************************
+     * 统计方法
+     *****************************************************/
 
     public long sum(Class<?> clazz, String column, String whereClause, String[] whereArgs) {
         TableInfo tableInfo = checkTable(clazz);
@@ -343,8 +345,7 @@ public class SqliteUtility {
         if (TextUtils.isEmpty(whereClause)) {
             whereArgs = null;
             sql = String.format(" select sum(%s) as _sum_ from %s ", column, tableInfo.getTableName());
-        }
-        else {
+        } else {
             sql = String.format(" select sum(%s) as _sum_ from %s where %s ", column, tableInfo.getTableName(), whereClause);
         }
 
@@ -356,7 +357,7 @@ public class SqliteUtility {
             Cursor cursor = db.rawQuery(sql, whereArgs);
             if (cursor.moveToFirst()) {
                 long sum = cursor.getLong(cursor.getColumnIndex("_sum_"));
-                DBLogger.d(TAG, "sum = %s 耗时%sms", String.valueOf(sum) ,String.valueOf(System.currentTimeMillis() - time));
+                DBLogger.d(TAG, "sum = %s 耗时%sms", String.valueOf(sum), String.valueOf(System.currentTimeMillis() - time));
                 cursor.close();
                 return sum;
             }
@@ -373,8 +374,7 @@ public class SqliteUtility {
         if (TextUtils.isEmpty(whereClause)) {
             whereArgs = null;
             sql = String.format(" select count(*) as _count_ from %s ", tableInfo.getTableName());
-        }
-        else {
+        } else {
             sql = String.format(" select count(*) as _count_ from %s where %s ", tableInfo.getTableName(), whereClause);
         }
 
@@ -386,7 +386,7 @@ public class SqliteUtility {
             Cursor cursor = db.rawQuery(sql, whereArgs);
             if (cursor.moveToFirst()) {
                 long count = cursor.getLong(cursor.getColumnIndex("_count_"));
-                DBLogger.d(TAG, "count = %s 耗时%sms", String.valueOf(count) ,String.valueOf(System.currentTimeMillis() - time));
+                DBLogger.d(TAG, "count = %s 耗时%sms", String.valueOf(count), String.valueOf(System.currentTimeMillis() - time));
                 cursor.close();
                 return count;
             }
@@ -397,8 +397,9 @@ public class SqliteUtility {
     }
 
 
-
-    /*********************************** tool method**********************************************/
+    /***********************************
+     * tool method
+     **********************************************/
     private <T> void bindEntityField(T entity, Cursor cursor, ColumnInfo columnInfo) {
         Field field = columnInfo.getField();
         field.setAccessible(true);
