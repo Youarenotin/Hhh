@@ -2,9 +2,11 @@ package com.youarenotin.lib_orm_db;
 
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import android.database.sqlite.SQLiteStatement;
 import android.text.TextUtils;
 
 import com.alibaba.fastjson.JSON;
+import com.youarenotin.lib_orm_db.extra.AutoIncrementColumnInfo;
 import com.youarenotin.lib_orm_db.extra.ColumnInfo;
 import com.youarenotin.lib_orm_db.extra.Extra;
 import com.youarenotin.lib_orm_db.extra.TableInfo;
@@ -42,7 +44,7 @@ public class SqliteUtility {
         return dbCache.get(dbName);
     }
 
-    /********************************** 开启select系列方法************************************/
+    /*********************************** 开启select系列方法************************************/
     public <T> T selectById(Extra extra, Class<T> clazz, Object id) {
         try {
             if (checkTable(clazz) == null) {
@@ -104,107 +106,199 @@ public class SqliteUtility {
         List<T> rltList = new ArrayList<T>();
         long start = System.currentTimeMillis();
         Cursor cursor = db.query(this.dbName, columnInfoNameList.toArray(new String[0]), selection, selectArgs, groupBy, having, orderBy, limit);
-        while (cursor.moveToNext()){
+        while (cursor.moveToNext()) {
             try {
                 T entity = clazz.newInstance();
 
-                bindEntityField(entity,cursor,tableInfo.getPrimaryKey());//绑定entity中主键
+                bindEntityField(entity, cursor, tableInfo.getPrimaryKey());//绑定entity中主键
                 for (ColumnInfo c : tableInfo.getColumns()) {//绑定常规字段
-                    bindEntityField(entity,cursor,c);
+                    bindEntityField(entity, cursor, c);
                 }
                 rltList.add(entity);
             } catch (InstantiationException e) {
                 e.printStackTrace();
             } catch (IllegalAccessException e) {
                 e.printStackTrace();
-            }
-            finally {
-                if (cursor!=null){
+            } finally {
+                if (cursor != null) {
                     cursor.close();
-                    cursor=null;
+                    cursor = null;
                 }
             }
         }
         long end = System.currentTimeMillis();
-        DBLogger.d(TAG,"table[ %s ] 设置数据完毕 , 耗时 %s",tableInfo.getTableName(),String.valueOf(end-start));
-        DBLogger.d(TAG,"查询到 %s 条数据" , rltList.size());
-        if (rltList.size()>0){
-            return  rltList;
+        DBLogger.d(TAG, "table[ %s ] 设置数据完毕 , 耗时 %s", tableInfo.getTableName(), String.valueOf(end - start));
+        DBLogger.d(TAG, "查询到 %s 条数据", rltList.size());
+        if (rltList.size() > 0) {
+            return rltList;
         }
         return null;
     }
 
-    /**********************************开启insert系列方法***************************************/
-    public <T> void insertOrReplace(Extra extra  ,T...entity ){
-        if (entity==null || entity.length<=0){
-            DBLogger.d(TAG,"method[ insertOrReplace(Extra extra  ,T...entity ) ] ,entity is null or empty ");
-        }
-        else {
-            insert(extra,Arrays.asList(entity),"INSERT OR REPLACE INTO");
+    /*********************************** 开启insert系列方法***************************************/
+    public <T> void insertOrReplace(Extra extra, T... entity) {
+        if (entity == null || entity.length <= 0) {
+            DBLogger.d(TAG, "method[ insertOrReplace(Extra extra  ,T...entity ) ] ,entity is null or empty ");
+        } else {
+            insert(extra, Arrays.asList(entity), "INSERT OR REPLACE INTO");
         }
 
     }
 
-    private <T> void insert(Extra extra, List<T> entityList, String s) {
+    public <T> void insert(Extra extra, List<T> entityList) {
+        insert(extra, entityList, " INSERT OR IGNORE INTO ");
+    }
+
+    public <T> void insertOrReplace(Extra extra, List<T> entityList) {
+        insert(extra, entityList, " INSERT OR REPLACE  INTO");
+    }
+
+    private <T> void insert(Extra extra, List<T> entityList, String insertInto) {
         TableInfo tableInfo = checkTable(entityList.get(0).getClass());
-        if (tableInfo == null){
-            DBLogger.d(TAG,"insert failed");
+        if (tableInfo == null) {
+            DBLogger.d(TAG, "insert failed");
         }
         long start = System.currentTimeMillis();
         db.beginTransaction();
-
-
+        String sql = SqlUtils.getInsertsql(insertInto, tableInfo);
+        DBLogger.d(TAG, "insert sql####  " + sql);
+        SQLiteStatement statement = db.compileStatement(sql);
+        long bindTime = 0;
+        try {
+            for (T entity : entityList) {
+                bindRowValue(entity, tableInfo, extra, statement);
+                bindTime += System.currentTimeMillis();
+                statement.execute();
+            }
+            DBLogger.d(TAG, "bindvalue 耗时 %s ?", bindTime);
+            DBLogger.d(TAG, "表 %s %s 数据 %s 条 执行时间 %sS",
+                    tableInfo.getTableName(),
+                    insertInto,
+                    entityList.size(),
+                    (System.currentTimeMillis() - start) / 1000
+            );
+            db.setTransactionSuccessful();
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            db.endTransaction();
+        }
     }
 
+    private <T> void bindRowValue(T entity, TableInfo tableInfo, Extra extra, SQLiteStatement statement) {
+        int index = 1;
+        if (tableInfo.getPrimaryKey() instanceof AutoIncrementColumnInfo)
+            ;
+        else
+            bindColumnValue(statement, index++, entity, tableInfo.getPrimaryKey());
 
-    /**********************************tool method**********************************************/
+        for (ColumnInfo c : tableInfo.getColumns()) {
+            bindColumnValue(statement, index++, entity, c);
+        }
+        // owner
+        String owner = extra == null || TextUtils.isEmpty(extra.getOwner()) ? "" : extra.getOwner();
+        statement.bindString(index++, owner);
+        // key
+        String key = extra == null || TextUtils.isEmpty(extra.getKey()) ? "" : extra.getKey();
+        statement.bindString(index++, key);
+        // createAt
+        long createAt = System.currentTimeMillis();
+        statement.bindLong(index, createAt);
+    }
+
+    private <T> void bindColumnValue(SQLiteStatement statement, int index, T entity, ColumnInfo column) {
+        try {
+            Field field = column.getField();
+            field.setAccessible(true);
+            Object obj = field.get(entity); //得到 entity中对应字段field的值
+
+            if (obj == null) {
+                statement.bindNull(index);
+            }
+            if ("object".equals(column.getDataType())) {
+                statement.bindString(index, JSON.toJSONString(obj));
+            }
+            if ("Integer".equals(column.getColumnType())) {
+                statement.bindLong(index, Long.valueOf(String.valueOf(obj)));
+            }
+            if ("REAL".equals(column.getColumnType())) {
+                statement.bindDouble(index, Double.valueOf(String.valueOf(obj)));
+            }
+            if ("TEXT".equals(column.getColumnType())) {
+                statement.bindString(index, String.valueOf(obj));
+            }
+            if ("BOLB".equals(column.getColumnType())) {
+                statement.bindBlob(index, (byte[]) obj);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            DBLogger.w(TAG, "属性 %s bindvalue 异常", column.getField().getName());
+        }
+
+    }
+    /*************************************update系列方法**********************************************/
+
+
+
+
+
+
+
+
+
+
+
+    /*************************************delete系列方法***********************************************/
+
+
+
+
+
+
+
+
+
+
+
+
+    /*********************************** tool method**********************************************/
     private <T> void bindEntityField(T entity, Cursor cursor, ColumnInfo columnInfo) {
         Field field = columnInfo.getField();
         field.setAccessible(true);
-        try { 
-        if (field.getType().getName().equals("int") || field.getType().getName().equals("java.lang.Integer")){
-            
-                field.set(entity,cursor.getInt(cursor.getColumnIndex(columnInfo.getColumnName())));
-          
+        try {
+            if (field.getType().getName().equals("int") || field.getType().getName().equals("java.lang.Integer")) {
+
+                field.set(entity, cursor.getInt(cursor.getColumnIndex(columnInfo.getColumnName())));
+
+            } else if (field.getType().getName().equals("long") ||
+                    field.getType().getName().equals("java.lang.Long")) {
+                field.set(entity, cursor.getLong(cursor.getColumnIndex(columnInfo.getColumnName())));
+            } else if (field.getType().getName().equals("float") ||
+                    field.getType().getName().equals("java.lang.Float")) {
+                field.set(entity, cursor.getFloat(cursor.getColumnIndex(columnInfo.getColumnName())));
+            } else if (field.getType().getName().equals("double") ||
+                    field.getType().getName().equals("java.lang.Double")) {
+                field.set(entity, cursor.getDouble(cursor.getColumnIndex(columnInfo.getColumnName())));
+            } else if (field.getType().getName().equals("boolean") ||
+                    field.getType().getName().equals("java.lang.Boolean")) {
+                field.set(entity, Boolean.parseBoolean(cursor.getString(cursor.getColumnIndex(columnInfo.getColumnName()))));
+            } else if (field.getType().getName().equals("char") ||
+                    field.getType().getName().equals("java.lang.Character")) {
+                field.set(entity, cursor.getString(cursor.getColumnIndex(columnInfo.getColumnName())).toCharArray()[0]);
+            } else if (field.getType().getName().equals("byte") ||
+                    field.getType().getName().equals("java.lang.Byte")) {
+                field.set(entity, (byte) cursor.getInt(cursor.getColumnIndex(columnInfo.getColumnName())));
+            } else if (field.getType().getName().equals("short") ||
+                    field.getType().getName().equals("java.lang.Short")) {
+                field.set(entity, cursor.getShort(cursor.getColumnIndex(columnInfo.getColumnName())));
+            } else if (field.getType().getName().equals("java.lang.String")) {
+                field.set(entity, cursor.getString(cursor.getColumnIndex(columnInfo.getColumnName())));
+            } else if (field.getType().getName().equals("[B")) {
+                field.set(entity, cursor.getBlob(cursor.getColumnIndex(columnInfo.getColumnName())));
+            } else {
+                String text = cursor.getString(cursor.getColumnIndex(columnInfo.getColumnName()));
+                field.set(entity, JSON.parseObject(text, field.getGenericType()));
             }
-        else if (field.getType().getName().equals("long") ||
-                field.getType().getName().equals("java.lang.Long")) {
-            field.set(entity, cursor.getLong(cursor.getColumnIndex(columnInfo.getColumnName())));
-        }
-        else if (field.getType().getName().equals("float") ||
-                field.getType().getName().equals("java.lang.Float")) {
-            field.set(entity, cursor.getFloat(cursor.getColumnIndex(columnInfo.getColumnName())));
-        }
-        else if (field.getType().getName().equals("double") ||
-                field.getType().getName().equals("java.lang.Double")) {
-            field.set(entity, cursor.getDouble(cursor.getColumnIndex(columnInfo.getColumnName())));
-        }
-        else if (field.getType().getName().equals("boolean") ||
-                field.getType().getName().equals("java.lang.Boolean")) {
-            field.set(entity, Boolean.parseBoolean(cursor.getString(cursor.getColumnIndex(columnInfo.getColumnName()))));
-        }
-        else if (field.getType().getName().equals("char") ||
-                field.getType().getName().equals("java.lang.Character")) {
-            field.set(entity, cursor.getString(cursor.getColumnIndex(columnInfo.getColumnName())).toCharArray()[0]);
-        }
-        else if (field.getType().getName().equals("byte") ||
-                field.getType().getName().equals("java.lang.Byte")) {
-            field.set(entity, (byte) cursor.getInt(cursor.getColumnIndex(columnInfo.getColumnName())));
-        }
-        else if (field.getType().getName().equals("short") ||
-                field.getType().getName().equals("java.lang.Short")) {
-            field.set(entity, cursor.getShort(cursor.getColumnIndex(columnInfo.getColumnName())));
-        }
-        else if (field.getType().getName().equals("java.lang.String")) {
-            field.set(entity, cursor.getString(cursor.getColumnIndex(columnInfo.getColumnName())));
-        }
-        else if (field.getType().getName().equals("[B")) {
-            field.set(entity, cursor.getBlob(cursor.getColumnIndex(columnInfo.getColumnName())));
-        }
-        else {
-            String text = cursor.getString(cursor.getColumnIndex(columnInfo.getColumnName()));
-            field.set(entity, JSON.parseObject(text, field.getGenericType()));
-        }
         } catch (IllegalAccessException e) {
             e.printStackTrace();
         }

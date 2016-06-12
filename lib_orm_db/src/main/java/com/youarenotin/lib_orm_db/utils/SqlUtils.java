@@ -1,6 +1,5 @@
 package com.youarenotin.lib_orm_db.utils;
 
-import android.nfc.Tag;
 import android.text.TextUtils;
 
 import com.youarenotin.lib_orm_db.SqliteUtility;
@@ -36,14 +35,43 @@ public class SqlUtils {
         for (ColumnInfo c : tableInfo.getColumns()){
             columns.add(c.getColumnName());
         }
+        columns.add(FieldUtils.getOwnerColumn().getColumnName());
+        columns.add(FieldUtils.getKeyColumn().getColumnName());
+        columns.add(FieldUtils.getCreateAtColumn().getColumnName());
         StringBuilder sb  = new StringBuilder(insertInto);
-        sb.append(" ").append(tableInfo.getTableName()).append(" ");
+        sb.append(" ").append(tableInfo.getTableName()).append(" ( ");
+        appendColumns(sb, columns);
         sb.append("VALUES ( ");
-        for (String s : columns){
-            sb.append(" ").append(s).append(" , ");
-        }
+        appendPlaceHolder(sb,columns);
         sb.append(" ) ");
+        return  sb.toString();
+    }
 
+    /**
+     * 拼接占位符 ?
+     * @param sb
+     * @param columns
+     */
+    private static void appendPlaceHolder(StringBuilder sb, List<String> columns) {
+        for (int i = 0 ; i < columns.size() ; i++){
+            sb.append("?");
+            if (i < columns.size()-1)
+                sb.append(",");
+        }
+    }
+
+    /**
+     * 拼接列名
+     * @param sb
+     * @param columns
+     */
+    private static void appendColumns(StringBuilder sb, List<String> columns) {
+        for (int i = 0 ; i < columns.size() ; i++){
+            sb.append('\'').append(columns.get(i)).append('\'');
+            if (i < columns.size()-1){
+                sb.append(",");
+            }
+        }
     }
 
     /**
