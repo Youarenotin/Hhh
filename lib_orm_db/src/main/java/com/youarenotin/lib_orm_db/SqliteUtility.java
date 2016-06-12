@@ -46,7 +46,9 @@ public class SqliteUtility {
         return dbCache.get(dbName);
     }
 
-    /*********************************** 开启select系列方法************************************/
+    /***********************************
+     * 开启select系列方法
+     ************************************/
     public <T> T selectById(Extra extra, Class<T> clazz, Object id) {
         try {
             if (checkTable(clazz) == null) {
@@ -137,7 +139,9 @@ public class SqliteUtility {
         return null;
     }
 
-    /*********************************** 开启insert系列方法***************************************/
+    /***********************************
+     * 开启insert系列方法
+     ***************************************/
     public <T> void insertOrReplace(Extra extra, T... entity) {
         if (entity == null || entity.length <= 0) {
             DBLogger.d(TAG, "method[ insertOrReplace(Extra extra  ,T...entity ) ] ,entity is null or empty ");
@@ -238,61 +242,159 @@ public class SqliteUtility {
         }
 
     }
-    /*************************************update系列方法**********************************************/
 
-    public  <T>  void update(Extra extra,T...entity){
-        if (entity.length==0){
-            DBLogger.d(TAG,"method[update(Extra extra,T...entity)]  entity is empty");
-        }
-        else{
-            insertOrReplace(extra,entity);
+    /*************************************
+     * update系列方法
+     **********************************************/
+
+    public <T> void update(Extra extra, T... entity) {
+        if (entity.length == 0) {
+            DBLogger.d(TAG, "method[update(Extra extra,T...entity)]  entity is empty");
+        } else {
+            insertOrReplace(extra, entity);
         }
     }
 
-    public  <T> void update(Extra extra,List<T> entityList){
-        if (entityList==null || entityList.size()==0){
-            DBLogger.d(TAG,"method[update(Extra extra,List<T> entityList)] entityList is null or empty");
-        }
-        else{
-            insertOrReplace(extra,entityList);
+    public <T> void update(Extra extra, List<T> entityList) {
+        if (entityList == null || entityList.size() == 0) {
+            DBLogger.d(TAG, "method[update(Extra extra,List<T> entityList)] entityList is null or empty");
+        } else {
+            insertOrReplace(extra, entityList);
         }
     }
 
-    public <T>  int  update(Class<?> clazz , ContentValues values , String whereClause , String[] whereArgs){
+    public <T> int update(Class<?> clazz, ContentValues values, String whereClause, String[] whereArgs) {
         try {
             TableInfo tableInfo = checkTable(clazz);
-            if (tableInfo!=null){
-              return   db.update(tableInfo.getTableName(),values,whereClause,whereArgs);
+            if (tableInfo != null) {
+                return db.update(tableInfo.getTableName(), values, whereClause, whereArgs);
             }
             return 0;
-        }
-        catch (Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
             return 0;
         }
     }
-    /*************************************delete系列方法***********************************************/
 
-    public <T> void deleteALL(Extra extra ,Class<?> clazz){
+    /*************************************
+     * delete系列方法
+     ***********************************************/
+
+    public <T> void deleteALL(Extra extra, Class<?> clazz) {
         try {
             TableInfo tableInfo = checkTable(clazz);
             String where = SqlUtils.appenExtraWhereClauseSql(extra);
-            String sql ="DELETE FROM "+tableInfo.getTableName()+"WHERE "+where;
-            DBLogger.d(TAG,"method[deleteALL] 表 %s sql=#### %s",tableInfo.getTableName(),sql);
+            String sql = "DELETE FROM " + tableInfo.getTableName() + "WHERE " + where;
+            DBLogger.d(TAG, "method[deleteALL] 表 %s sql=#### %s", tableInfo.getTableName(), sql);
             long start = System.currentTimeMillis();
             db.execSQL(sql);
-            DBLogger.d(TAG,"表%s 清除数据 耗时%s",tableInfo.getTableName(),String.valueOf((System.currentTimeMillis()-start)/1000));
+            DBLogger.d(TAG, "表%s 清除数据 耗时%s", tableInfo.getTableName(), String.valueOf((System.currentTimeMillis() - start) / 1000));
         } catch (SQLException e) {
             e.printStackTrace();
         }
     }
 
+    public <T>  void deleteById(Extra extra , Class<?> clazz , Object id){
+        try {
+            TableInfo tableInfo = checkTable(clazz);
+            String where = SqlUtils.appenExtraWhereClauseSql(extra);
+            String name = tableInfo.getPrimaryKey().getColumnName();
+            where = String.format(" "+name+" = "+String.valueOf(id)+" AND　%s",where);
+            String sql = "DELETE FROM "+tableInfo.getTableName()+" WHERE "+where;
+            DBLogger.d(TAG, "method[deleteById] 表%s  sql##### %s", tableInfo.getTableName(), sql);
+            long start = System.currentTimeMillis();
+            db.execSQL(sql);
+            DBLogger.d(TAG,"表%s 删除数据 耗时%s",tableInfo.getTableName(),String.valueOf((System.currentTimeMillis()-start) / 1000));
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
 
+    public <T> int delete(Class<?> clazz, String whereClause, String[] whereArgs) {
+        long start = 0;
+        TableInfo tableInfo = checkTable(clazz);
+        try {
+            start = System.currentTimeMillis();
+            if (tableInfo == null) {
+                DBLogger.d(TAG, "method[delete] 表%s faied", tableInfo.getTableName());
+                return 0;
+            }
+            DBLogger.d(TAG, "method[delete] 表%s ", tableInfo.getTableName());
+            return db.delete(tableInfo.getTableName(), whereClause, whereArgs);
 
+        } catch (Exception e) {
+            e.printStackTrace();
+            return 0 ;
+        } finally {
+            DBLogger.d(TAG, "表%s 删除数据 耗时%s", tableInfo.getTableName(), String.valueOf((System.currentTimeMillis() - start) / 1000));
+        }
 
+    }
 
+    /***********************************统计方法*****************************************************/
 
+    public long sum(Class<?> clazz, String column, String whereClause, String[] whereArgs) {
+        TableInfo tableInfo = checkTable(clazz);
 
+        if (TextUtils.isEmpty(column))
+            return 0;
+
+        String sql = null;
+        if (TextUtils.isEmpty(whereClause)) {
+            whereArgs = null;
+            sql = String.format(" select sum(%s) as _sum_ from %s ", column, tableInfo.getTableName());
+        }
+        else {
+            sql = String.format(" select sum(%s) as _sum_ from %s where %s ", column, tableInfo.getTableName(), whereClause);
+        }
+
+        DBLogger.d(TAG, "sum() --- > " + sql);
+        DBLogger.d(TAG, whereArgs);
+
+        try {
+            long time = System.currentTimeMillis();
+            Cursor cursor = db.rawQuery(sql, whereArgs);
+            if (cursor.moveToFirst()) {
+                long sum = cursor.getLong(cursor.getColumnIndex("_sum_"));
+                DBLogger.d(TAG, "sum = %s 耗时%sms", String.valueOf(sum) ,String.valueOf(System.currentTimeMillis() - time));
+                cursor.close();
+                return sum;
+            }
+        } catch (Exception e) {
+            DBLogger.logExc(e);
+        }
+        return 0;
+    }
+
+    public long count(Class<?> clazz, String whereClause, String[] whereArgs) {
+        TableInfo tableInfo = checkTable(clazz);
+
+        String sql = null;
+        if (TextUtils.isEmpty(whereClause)) {
+            whereArgs = null;
+            sql = String.format(" select count(*) as _count_ from %s ", tableInfo.getTableName());
+        }
+        else {
+            sql = String.format(" select count(*) as _count_ from %s where %s ", tableInfo.getTableName(), whereClause);
+        }
+
+        DBLogger.d(TAG, "count --- > " + sql);
+        DBLogger.d(TAG, whereArgs);
+
+        try {
+            long time = System.currentTimeMillis();
+            Cursor cursor = db.rawQuery(sql, whereArgs);
+            if (cursor.moveToFirst()) {
+                long count = cursor.getLong(cursor.getColumnIndex("_count_"));
+                DBLogger.d(TAG, "count = %s 耗时%sms", String.valueOf(count) ,String.valueOf(System.currentTimeMillis() - time));
+                cursor.close();
+                return count;
+            }
+        } catch (Exception e) {
+            DBLogger.logExc(e);
+        }
+        return 0;
+    }
 
 
 
