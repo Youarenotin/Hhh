@@ -1,6 +1,8 @@
 package com.youarenotin.lib_orm_db;
 
+import android.content.ContentValues;
 import android.database.Cursor;
+import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteStatement;
 import android.text.TextUtils;
@@ -238,19 +240,52 @@ public class SqliteUtility {
     }
     /*************************************update系列方法**********************************************/
 
+    public  <T>  void update(Extra extra,T...entity){
+        if (entity.length==0){
+            DBLogger.d(TAG,"method[update(Extra extra,T...entity)]  entity is empty");
+        }
+        else{
+            insertOrReplace(extra,entity);
+        }
+    }
 
+    public  <T> void update(Extra extra,List<T> entityList){
+        if (entityList==null || entityList.size()==0){
+            DBLogger.d(TAG,"method[update(Extra extra,List<T> entityList)] entityList is null or empty");
+        }
+        else{
+            insertOrReplace(extra,entityList);
+        }
+    }
 
-
-
-
-
-
-
-
-
+    public <T>  int  update(Class<?> clazz , ContentValues values , String whereClause , String[] whereArgs){
+        try {
+            TableInfo tableInfo = checkTable(clazz);
+            if (tableInfo!=null){
+              return   db.update(tableInfo.getTableName(),values,whereClause,whereArgs);
+            }
+            return 0;
+        }
+        catch (Exception e){
+            e.printStackTrace();
+            return 0;
+        }
+    }
     /*************************************delete系列方法***********************************************/
 
-
+    public <T> void deleteALL(Extra extra ,Class<?> clazz){
+        try {
+            TableInfo tableInfo = checkTable(clazz);
+            String where = SqlUtils.appenExtraWhereClauseSql(extra);
+            String sql ="DELETE FROM "+tableInfo.getTableName()+"WHERE "+where;
+            DBLogger.d(TAG,"method[deleteALL] 表 %s sql=#### %s",tableInfo.getTableName(),sql);
+            long start = System.currentTimeMillis();
+            db.execSQL(sql);
+            DBLogger.d(TAG,"表%s 清除数据 耗时%s",tableInfo.getTableName(),String.valueOf((System.currentTimeMillis()-start)/1000));
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
 
 
 

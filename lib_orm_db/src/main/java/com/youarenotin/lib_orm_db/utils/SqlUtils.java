@@ -160,4 +160,25 @@ public class SqlUtils {
         }
         return args.toArray(new String[0]);
     }
+
+    public static String appenExtraWhereClauseSql(Extra extra) {
+        StringBuffer sb = new StringBuffer();
+
+        if (extra == null || (TextUtils.isEmpty(extra.getKey()) && TextUtils.isEmpty(extra.getOwner()))) {
+            sb.append("");
+        }
+        else if (!TextUtils.isEmpty(extra.getKey()) && !TextUtils.isEmpty(extra.getOwner())) {
+            sb.append(" ").append(FieldUtils.OWNER).append(" = '").append(extra.getOwner()).append("' ")
+                    .append(" and ")
+                    .append(FieldUtils.KEY).append(" = '").append(extra.getKey()).append("' ");
+        }
+        else if (!TextUtils.isEmpty(extra.getKey())) {
+            sb.append(FieldUtils.KEY).append(" = '").append(extra.getKey()).append("' ");
+        }
+        else if (!TextUtils.isEmpty(extra.getOwner())) {
+            sb.append(" ").append(FieldUtils.OWNER).append(" = '").append(extra.getOwner()).append("' ");
+        }
+
+        return sb.toString();
+    }
 }
