@@ -89,7 +89,7 @@ public class TableInfoUtils {
                             if (tableInfo.getPrimaryKey().getColumnName().equals(str))
                                 continue;
                         for (String strBeta : columnNames){
-                            if (str==strBeta){
+                            if (str.equals(strBeta)){
                                 isNew = false;
                             }
                         }

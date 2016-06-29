@@ -49,6 +49,33 @@ public class SqliteUtility {
     /***********************************
      * 开启select系列方法
      ************************************/
+    public <T> Boolean selectById(Class<T> clazz, Object id) {
+        try {
+            if (checkTable(clazz) == null) {
+                DBLogger.d(TAG, "select failed");
+                return null;
+            }
+            TableInfo tableInfo = checkTable(clazz);
+            //region selection
+            String selection = String.format(" %s = ? ", tableInfo.getPrimaryKey().getColumnName());
+            //endregion
+
+            //region selectionArgs
+//            String[] whereArgs = SqlUtils.appendExtraWhereArgs(extra);
+            List<String> list = new ArrayList<String>();
+            list.add(String.valueOf(id));//根据主键id
+            String[] selectionArgs = list.toArray(new String[0]);
+            //endregion
+            Cursor cursor = db.query(tableInfo.getTableName(), null, selection, selectionArgs, null, null, null);
+            if (cursor.moveToNext()) {
+                return true;
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
     public <T> T selectById(Extra extra, Class<T> clazz, Object id) {
         try {
             if (checkTable(clazz) == null) {
@@ -109,7 +136,7 @@ public class SqliteUtility {
         }
         List<T> rltList = new ArrayList<T>();
         long start = System.currentTimeMillis();
-        Cursor cursor = db.query(this.dbName, columnInfoNameList.toArray(new String[0]), selection, selectArgs, groupBy, having, orderBy, limit);
+        Cursor cursor = db.query(tableInfo.getTableName(), columnInfoNameList.toArray(new String[0]), selection, selectArgs, groupBy, having, orderBy, limit);
         while (cursor.moveToNext()) {
             try {
                 T entity = clazz.newInstance();
@@ -142,6 +169,17 @@ public class SqliteUtility {
     /***********************************
      * 开启insert系列方法
      ***************************************/
+    public <T>  void  insert(Class<?> clazz, ContentValues values, String whereClause, String[] whereArgs) {
+        try {
+            TableInfo tableInfo = checkTable(clazz);
+            if (tableInfo != null) {
+                db.insert(tableInfo.getTableName(), null, values);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
     public <T> void insertOrReplace(Extra extra, T... entity) {
         if (entity == null || entity.length <= 0) {
             DBLogger.d(TAG, "method[ insertOrReplace(Extra extra  ,T...entity ) ] ,entity is null or empty ");
@@ -246,7 +284,6 @@ public class SqliteUtility {
     /*************************************
      * update系列方法
      **********************************************/
-
     public <T> void update(Extra extra, T... entity) {
         if (entity.length == 0) {
             DBLogger.d(TAG, "method[update(Extra extra,T...entity)]  entity is empty");

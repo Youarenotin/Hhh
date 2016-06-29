@@ -86,16 +86,18 @@ public class SqlUtils {
         sb.append(tableInfo.getTableName());
         sb.append(" ( ");
         //添加主键sql
-        if (primaryKey instanceof AutoIncrementColumnInfo) {//两种列AutoIncrementColumnInfo和ColumnInfo
-            sb.append(" ")
-                    .append(primaryKey.getColumnName())
-                    .append(" ")
-                    .append("INTEGER PRIMARY KEY AUTOINCREMENT , ");
-        } else {
-            sb.append(" ")
-                    .append(primaryKey.getColumnName())
-                    .append(" ").append(primaryKey.getColumnType())
-                    .append(" ").append("NOT NULL ,");
+        if (primaryKey != null) {
+            if (primaryKey instanceof AutoIncrementColumnInfo) {//两种列AutoIncrementColumnInfo和ColumnInfo
+                sb.append(" ")
+                        .append(primaryKey.getColumnName())
+                        .append(" ")
+                        .append("INTEGER PRIMARY KEY AUTOINCREMENT , ");
+            } else {
+                sb.append(" ")
+                        .append(primaryKey.getColumnName())
+                        .append(" ").append(primaryKey.getColumnType())
+                        .append(" ").append("NOT NULL ,");
+            }
         }
         //添加常规列sql
         for (ColumnInfo c : tableInfo.getColumns()){
@@ -108,7 +110,7 @@ public class SqlUtils {
         sb.append(" ").append(FieldUtils.KEY).append(" ").append("TEXT NOT NULL ,");
         sb.append(" ").append(FieldUtils.CREATEAT).append(" ").append("INTEGER NOT NULL");
         if (primaryKey instanceof  ColumnInfo){
-            sb.append(" PRIMARY KEY ( ").append(primaryKey.getColumnName()).append(" , ")
+            sb.append(" , PRIMARY KEY ( ").append(primaryKey.getColumnName()).append(" , ")
                     .append(FieldUtils.OWNER).append(" , ")
                     .append(FieldUtils.KEY).append(" )");
         }
