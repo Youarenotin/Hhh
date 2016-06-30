@@ -116,6 +116,11 @@ public class SqliteUtility {
     }
 
     public <T> List<T> select(Class<T> clazz, String selection, String[] selectArgs) {
+        if (checkTable(clazz) == null) {
+            DBLogger.d(TAG, "select failed : 表不存在且创建失败　");
+            return null;
+        }
+        TableInfo tableInfo = checkTable(clazz);
         return select(clazz, selection, selectArgs, null, null, null, null);
     }
 
