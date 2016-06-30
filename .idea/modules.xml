@@ -5,6 +5,7 @@
       <module fileurl="file://$PROJECT_DIR$/Hhh.iml" filepath="$PROJECT_DIR$/Hhh.iml" />
       <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
       <module fileurl="file://$PROJECT_DIR$/lib_orm_db/lib_orm_db.iml" filepath="$PROJECT_DIR$/lib_orm_db/lib_orm_db.iml" />
+      <module fileurl="file://$PROJECT_DIR$/pinnedsectionlistview/pinnedsectionlistview.iml" filepath="$PROJECT_DIR$/pinnedsectionlistview/pinnedsectionlistview.iml" />
     </modules>
   </component>
 </project>
